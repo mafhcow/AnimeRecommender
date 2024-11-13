@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAL Anime Recommender</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f0f2f5;
+            color: #1a1a1a;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 1200px;
+            padding: 2rem 1rem;
+            flex: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .error {
+            display: none;
+            color: #dc3545;
+            text-align: center;
+            margin: 1rem 0;
+            padding: 1rem;
+            border-radius: 8px;
+            background-color: #fff;
+        }
+
+        .recommendations {
+            display: none;
+        }
+
+        .table {
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .pagination {
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .page-info {
+            text-align: center;
+            margin-top: 0.5rem;
+            color: #6c757d;
+        }
+
+        .form-control {
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+        }
+
+        .btn-primary {
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+        }
+
+        /* Autocomplete dropdown styles */
+        .anime-search-container {
+            position: relative;
+        }
+
+        .anime-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .anime-suggestion {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+
+        .anime-suggestion:hover {
+            background-color: #f8f9fa;
+        }
+
+        .anime-suggestion .title {
+            font-weight: 500;
+        }
+
+        .anime-suggestion .meta {
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 1rem;
+            color: #6c757d;
+            margin-top: auto;
+        }
+
+        .footer a {
+            color: #0d6efd;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>MAL Anime Recommender</h1>
+            <p>Get personalized anime recommendations based on your MyAnimeList ratings</p>
+        </div>
+
+        <div class="row justify-content-center mb-4">
+            <div class="col-md-8 col-lg-6">
+                <div class="card">
+                    <div class="card-body">
+                        <ul class="nav nav-tabs" id="recommendationTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="personal-tab" data-bs-toggle="tab" data-bs-target="#personal" type="button" role="tab">
+                                    Personal Recommendations
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="similar-tab" data-bs-toggle="tab" data-bs-target="#similar" type="button" role="tab">
+                                    Similar Anime
+                                </button>
+                            </li>
+                        </ul>
+                        
+                        <div class="tab-content mt-3" id="recommendationTabsContent">
+                            <div class="tab-pane fade show active" id="personal" role="tabpanel">
+                                <form id="recommendation-form">
+                                    <div class="mb-4">
+                                        <label for="username" class="form-label">MyAnimeList Username</label>
+                                        <input type="text" class="form-control" id="username" required 
+                                               placeholder="Enter your MAL username">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100">Get Recommendations</button>
+                                </form>
+                            </div>
+                            <div class="tab-pane fade" id="similar" role="tabpanel">
+                                <form id="similar-form">
+                                    <div class="mb-4">
+                                        <label for="anime-search" class="form-label">Search Anime</label>
+                                        <div class="anime-search-container">
+                                            <input type="text" class="form-control" id="anime-search" required 
+                                                   placeholder="Start typing an anime title...">
+                                            <input type="hidden" id="selected-anime-id">
+                                            <div class="anime-suggestions" id="anime-suggestions"></div>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100" disabled>Find Similar Anime</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2" id="loading-text">Analyzing your anime list...</p>
+        </div>
+
+        <div class="error"></div>
+
+        <div class="recommendations">
+            <div id="recommendations-header">
+                <h2 class="text-center mb-4">Recommendations for <span id="username-display"></span></h2>
+            </div>
+            <div id="similar-header" style="display: none;">
+                <h2 class="text-center mb-4">Similar to <span id="source-anime-title"></span></h2>
+                <div class="text-center mb-4">
+                    <small class="text-muted">
+                        MAL Score: <span id="source-anime-score"></span> | 
+                        Ratings in database: <span id="source-anime-ratings"></span>
+                    </small>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th id="score-header">Predicted Score</th>
+                            <th>MAL Score</th>
+                            <th>MAL Link</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recommendations-table">
+                    </tbody>
+                </table>
+            </div>
+            <nav aria-label="Recommendations navigation">
+                <ul class="pagination" id="pagination">
+                </ul>
+            </nav>
+            <div class="page-info">
+                Showing page <span id="current-page">1</span> of <span id="total-pages">5</span>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <small>Built using <a href="https://windsurf.ai" target="_blank" rel="noopener">Windsurf</a></small>
+    </footer>
+
+    <script>
+        let currentUsername = '';
+        let currentPage = 1;
+        let allRecommendations = [];
+        const itemsPerPage = 20;
+        let searchTimeout = null;
+
+        document.getElementById('anime-search').addEventListener('input', function(e) {
+            const query = e.target.value.trim();
+            const submitButton = document.querySelector('#similar-form button[type="submit"]');
+            const suggestionsDiv = document.getElementById('anime-suggestions');
+            
+            // Clear the selected anime ID when input changes
+            document.getElementById('selected-anime-id').value = '';
+            submitButton.disabled = true;
+            
+            // Clear previous timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            if (query.length < 2) {
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+            
+            // Set new timeout for search
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const response = await fetch(`/api/search_anime?q=${encodeURIComponent(query)}`);
+                    const suggestions = await response.json();
+                    
+                    if (suggestions.length > 0) {
+                        suggestionsDiv.innerHTML = suggestions.map(anime => `
+                            <div class="anime-suggestion" data-id="${anime.id}" data-title="${anime.title}">
+                                <div class="title">${anime.title}</div>
+                                <div class="meta">
+                                    Score: ${anime.rating ? anime.rating.toFixed(2) : 'N/A'} | 
+                                    Ratings: ${anime.num_ratings}
+                                </div>
+                            </div>
+                        `).join('');
+                        
+                        suggestionsDiv.style.display = 'block';
+                        
+                        // Add click handlers to suggestions
+                        suggestionsDiv.querySelectorAll('.anime-suggestion').forEach(div => {
+                            div.addEventListener('click', function() {
+                                const animeId = this.dataset.id;
+                                const animeTitle = this.dataset.title;
+                                document.getElementById('anime-search').value = animeTitle;
+                                document.getElementById('selected-anime-id').value = animeId;
+                                suggestionsDiv.style.display = 'none';
+                                submitButton.disabled = false;
+                            });
+                        });
+                    } else {
+                        suggestionsDiv.style.display = 'none';
+                    }
+                } catch (error) {
+                    console.error('Error fetching suggestions:', error);
+                }
+            }, 300);
+        });
+
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.anime-search-container')) {
+                document.getElementById('anime-suggestions').style.display = 'none';
+            }
+        });
+
+        document.getElementById('recommendation-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            currentUsername = document.getElementById('username').value.trim();
+            currentPage = 1;
+            document.getElementById('loading-text').textContent = 'Analyzing your anime list...';
+            document.getElementById('recommendations-header').style.display = 'block';
+            document.getElementById('similar-header').style.display = 'none';
+            document.getElementById('score-header').textContent = 'Predicted Score';
+            document.getElementById('username-display').textContent = currentUsername;
+            await fetchRecommendations();
+        });
+
+        document.getElementById('similar-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const animeId = document.getElementById('selected-anime-id').value;
+            if (!animeId) {
+                alert('Please select an anime from the suggestions');
+                return;
+            }
+            
+            currentPage = 1;
+            document.getElementById('loading-text').textContent = 'Finding similar anime...';
+            document.getElementById('recommendations-header').style.display = 'none';
+            document.getElementById('similar-header').style.display = 'block';
+            document.getElementById('score-header').textContent = 'Similarity Score';
+            await fetchSimilarAnime(animeId);
+        });
+
+        async function fetchSimilarAnime(animeId) {
+            const loadingDiv = document.querySelector('.loading');
+            const errorDiv = document.querySelector('.error');
+            const recommendationsDiv = document.querySelector('.recommendations');
+            
+            loadingDiv.style.display = 'block';
+            errorDiv.style.display = 'none';
+            recommendationsDiv.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/similar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        anime_id: animeId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Update source anime info
+                    document.getElementById('source-anime-title').textContent = data.source_anime.title;
+                    document.getElementById('source-anime-score').textContent = 
+                        data.source_anime.mal_score || 'N/A';
+                    document.getElementById('source-anime-ratings').textContent = 
+                        data.source_anime.num_ratings;
+                    
+                    // Format recommendations for display
+                    allRecommendations = data.similar_anime.map(anime => ({
+                        title: anime.title,
+                        predicted_score: anime.similarity,
+                        mal_score: anime.mal_score || 'N/A',
+                        mal_id: anime.mal_id
+                    }));
+                    
+                    displayCurrentPage();
+                } else {
+                    throw new Error(data.error || 'Failed to get similar anime');
+                }
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        async function fetchRecommendations() {
+            const username = currentUsername;
+            const loadingDiv = document.querySelector('.loading');
+            const errorDiv = document.querySelector('.error');
+            const recommendationsDiv = document.querySelector('.recommendations');
+            
+            loadingDiv.style.display = 'block';
+            errorDiv.style.display = 'none';
+            recommendationsDiv.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/recommendations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    allRecommendations = data.recommendations;
+                    displayCurrentPage();
+                } else {
+                    throw new Error(data.error || 'Failed to get recommendations');
+                }
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        function displayCurrentPage() {
+            const recommendationsDiv = document.querySelector('.recommendations');
+            const tableBody = document.getElementById('recommendations-table');
+            const usernameDisplay = document.getElementById('username-display');
+            const currentPageSpan = document.getElementById('current-page');
+            const totalPagesSpan = document.getElementById('total-pages');
+            const paginationUl = document.getElementById('pagination');
+            
+            const totalPages = Math.ceil(allRecommendations.length / itemsPerPage);
+            
+            // Update pagination info
+            currentPageSpan.textContent = currentPage;
+            totalPagesSpan.textContent = totalPages;
+            
+            // Clear existing table rows
+            tableBody.innerHTML = '';
+            
+            // Calculate start and end indices for current page
+            const startIdx = (currentPage - 1) * itemsPerPage;
+            const endIdx = Math.min(startIdx + itemsPerPage, allRecommendations.length);
+            
+            // Add recommendation rows for current page
+            for (let i = startIdx; i < endIdx; i++) {
+                const rec = allRecommendations[i];
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${rec.title}</td>
+                    <td>${typeof rec.predicted_score === 'number' ? rec.predicted_score.toFixed(2) : rec.predicted_score}</td>
+                    <td>${rec.mal_score}</td>
+                    <td><a href="https://myanimelist.net/anime/${rec.mal_id}" target="_blank">View</a></td>
+                `;
+                tableBody.appendChild(row);
+            }
+            
+            // Create pagination controls
+            paginationUl.innerHTML = '';
+            
+            // Previous button
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = `<a class="page-link" href="#" ${currentPage === 1 ? 'tabindex="-1"' : ''}>Previous</a>`;
+            prevLi.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    currentPage--;
+                    displayCurrentPage();
+                }
+            });
+            paginationUl.appendChild(prevLi);
+            
+            // Page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                const li = document.createElement('li');
+                li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+                li.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    currentPage = i;
+                    displayCurrentPage();
+                });
+                paginationUl.appendChild(li);
+            }
+            
+            // Next button
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            nextLi.innerHTML = `<a class="page-link" href="#" ${currentPage === totalPages ? 'tabindex="-1"' : ''}>Next</a>`;
+            nextLi.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    displayCurrentPage();
+                }
+            });
+            paginationUl.appendChild(nextLi);
+            
+            // Show recommendations
+            recommendationsDiv.style.display = 'block';
+            
+            // Scroll to top of recommendations
+            recommendationsDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>

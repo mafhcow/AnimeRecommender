@@ -1,0 +1,10 @@
+pandas>=2.2.0
+numpy>=1.26.0
+scipy>=1.12.0
+pyspark>=3.5.0
+python-dotenv>=1.0.0
+argparse>=1.4.0
+flask>=3.0.0
+flask-cors>=4.0.0
+gunicorn>=22.0.0
+Flask-Limiter>=3.5.0
