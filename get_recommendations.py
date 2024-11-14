@@ -26,6 +26,7 @@ class RecommenderModel:
         self.anime_mapping = None
         self.reverse_anime_mapping = None
         self.item_factors = None
+        self.mean_user_factor = None
         self.regularization = None
         
         # Load environment variables
@@ -47,12 +48,16 @@ class RecommenderModel:
             # Check if required files exist
             mappings_path = os.path.join(self.model_dir, 'mappings.pkl')
             item_factors_path = os.path.join(self.model_dir, 'item_factors.npy')
+            user_factors_path = os.path.join(self.model_dir, 'user_factors.npy')
+            mean_user_factor_path = os.path.join(self.model_dir, 'mean_user_factor.npy')
             
             if not os.path.exists(mappings_path):
                 raise FileNotFoundError(f"Mappings file not found at '{mappings_path}'")
             if not os.path.exists(item_factors_path):
                 raise FileNotFoundError(f"Item factors file not found at '{item_factors_path}'")
-            
+            if not os.path.exists(user_factors_path):
+                raise FileNotFoundError(f"User factors file not found at '{user_factors_path}'")
+
             # Load mappings
             with open(mappings_path, 'rb') as f:
                 mappings = pickle.load(f)
@@ -74,6 +79,15 @@ class RecommenderModel:
             # Load latent factors
             self.item_factors = np.load(item_factors_path)
             
+            # Load or compute mean user factor
+            if os.path.exists(mean_user_factor_path):
+                self.mean_user_factor = np.load(mean_user_factor_path)
+            else:
+                user_factors = np.load(user_factors_path)
+                self.mean_user_factor = np.mean(user_factors, axis=0)
+                self.mean_user_factor /= np.linalg.norm(self.mean_user_factor)  # Normalize it
+                np.save(mean_user_factor_path, self.mean_user_factor)
+
             # Verify dimensions match
             if len(self.anime_mapping) != len(self.item_factors):
                 raise ValueError(f"Mismatch between anime mapping size ({len(self.anime_mapping)}) "
@@ -205,11 +219,17 @@ class RecommenderModel:
             # Get the anime's latent factors
             anime_factors = self.item_factors[anime_idx]
             
-            # Calculate cosine similarity with all other anime
+            # Project all item factors onto plane orthogonal to mean user factor
+            # Formula: v_proj = v - (v·n)n where n is the normalized mean user factor
+            dots = self.item_factors @ self.mean_user_factor
+            projected_factors = self.item_factors - np.outer(dots, self.mean_user_factor)
+            projected_anime_factors = anime_factors - (anime_factors @ self.mean_user_factor) * self.mean_user_factor
+
+            # Calculate cosine similarity with all other anime using projected factors
             # Normalize the vectors for cosine similarity
-            norms = np.linalg.norm(self.item_factors, axis=1)
-            normalized_factors = self.item_factors / norms[:, np.newaxis]
-            normalized_anime_factors = anime_factors / np.linalg.norm(anime_factors)
+            norms = np.linalg.norm(projected_factors, axis=1)
+            normalized_factors = projected_factors / norms[:, np.newaxis]
+            normalized_anime_factors = projected_anime_factors / np.linalg.norm(projected_anime_factors)
             
             # Calculate similarities
             similarities = normalized_factors @ normalized_anime_factors
