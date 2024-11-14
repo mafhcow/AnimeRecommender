@@ -2,7 +2,7 @@
 
 A machine learning-based anime recommendation system that uses MyAnimeList (MAL) data to provide personalized recommendations and find similar anime.
 This was written using [Windsurf](https://windsurf.ai/), I wrote almost none of the code and Cascade generated the rest. Give it a try today for free!
-This repo contains a rating database consisting of approximately 550,000 users and 90 million ratings, which was used to train a recommendation model. I was able to train the model in under 10 minutes on an 8 core 16 GB RAM laptop.
+The ratings database is available [here](https://storage.cloud.google.com/anime_rating_db/mal_users.db), consisting of approximately 550,000 users and 90 million ratings, which was used to train a recommendation model. I was able to train the model in under 10 minutes on an 8 core 16 GB RAM laptop.
 
 ## Features
 
